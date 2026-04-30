@@ -1,0 +1,17 @@
+{
+  "name": "seed_recall_first",
+  "backend": "mock",
+  "brand_prompt": "brand_recall_v1",
+  "crp_prompt": "crp_recall_v1",
+  "use_logo_ocr": true,
+  "use_logo_caption": true,
+  "prompt_defense": true,
+  "popularity_validation": "google-indexed",
+  "hosting_rule": "strict",
+  "max_interactions": 1,
+  "brand_confidence_min": 0.70,
+  "report_policy": "mismatch_or_crp",
+  "temperature": 0.0,
+  "runtime_budget_sec": 8.0,
+  "hypothesis": "Lower brand confidence floor and OR-fusion should catch hidden-login and lesser-known-brand pages at the risk of more false positives."
+}

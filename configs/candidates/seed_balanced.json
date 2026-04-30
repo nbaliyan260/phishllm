@@ -1,0 +1,17 @@
+{
+  "name": "seed_balanced",
+  "backend": "mock",
+  "brand_prompt": "brand_robust_v1",
+  "crp_prompt": "crp_default_v1",
+  "use_logo_ocr": true,
+  "use_logo_caption": true,
+  "prompt_defense": true,
+  "popularity_validation": "cached",
+  "hosting_rule": "strict",
+  "max_interactions": 1,
+  "brand_confidence_min": 0.80,
+  "report_policy": "mismatch_and_crp",
+  "temperature": 0.0,
+  "runtime_budget_sec": 5.0,
+  "hypothesis": "Cached popularity validation removes most of the latency without sacrificing the alias-resolution benefit; expected to be near-Pareto."
+}

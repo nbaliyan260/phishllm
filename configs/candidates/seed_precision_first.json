@@ -1,0 +1,17 @@
+{
+  "name": "seed_precision_first",
+  "backend": "mock",
+  "brand_prompt": "brand_precision_v1",
+  "crp_prompt": "crp_precision_v1",
+  "use_logo_ocr": true,
+  "use_logo_caption": true,
+  "prompt_defense": true,
+  "popularity_validation": "google-indexed",
+  "hosting_rule": "strict",
+  "max_interactions": 0,
+  "brand_confidence_min": 0.90,
+  "report_policy": "mismatch_and_crp",
+  "temperature": 0.0,
+  "runtime_budget_sec": 5.0,
+  "hypothesis": "Higher brand confidence threshold and AND-fusion with no extra interaction should drive precision toward 1.0 at the cost of recall on subtle phishing pages."
+}

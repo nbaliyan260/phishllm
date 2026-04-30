@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.venv/
+venv/
+.env
+.env.*
+.DS_Store
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Synthetic dataset is reproducible via `make dataset`.
+data/labels.csv
+data/site_*/
+!data/README.txt
+
+# Run outputs are reproducible from configs; do not commit.
+runs/
+artifacts/plots/*.png
+artifacts/plots/*.pdf
+artifacts/tables/*.csv
+artifacts/tables/*.md
+artifacts/logs/*.jsonl
+!artifacts/plots/.gitkeep
+!artifacts/tables/.gitkeep
+!artifacts/logs/.gitkeep
+!runs/.gitkeep

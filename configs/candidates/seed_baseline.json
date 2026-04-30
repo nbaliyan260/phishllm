@@ -1,0 +1,17 @@
+{
+  "name": "seed_baseline",
+  "backend": "mock",
+  "brand_prompt": "brand_default_v1",
+  "crp_prompt": "crp_default_v1",
+  "use_logo_ocr": true,
+  "use_logo_caption": true,
+  "prompt_defense": true,
+  "popularity_validation": "google-indexed",
+  "hosting_rule": "strict",
+  "max_interactions": 1,
+  "brand_confidence_min": 0.80,
+  "report_policy": "mismatch_and_crp",
+  "temperature": 0.0,
+  "runtime_budget_sec": 6.0,
+  "hypothesis": "Faithful reproduction of the paper's reported configuration: defended prompts, both visual modalities, popularity validation, strict hosting rule, one CRP transition hop."
+}

@@ -1,0 +1,17 @@
+{
+  "name": "seed_no_validation",
+  "backend": "mock",
+  "brand_prompt": "brand_default_v1",
+  "crp_prompt": "crp_default_v1",
+  "use_logo_ocr": true,
+  "use_logo_caption": true,
+  "prompt_defense": true,
+  "popularity_validation": "disabled",
+  "hosting_rule": "relaxed",
+  "max_interactions": 1,
+  "brand_confidence_min": 0.80,
+  "report_policy": "mismatch_or_crp",
+  "temperature": 0.0,
+  "runtime_budget_sec": 5.0,
+  "hypothesis": "Stress candidate: removing popularity validation should expose alias false positives and demonstrate why the validation step matters."
+}

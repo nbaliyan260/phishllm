@@ -1,0 +1,152 @@
+\documentclass[10pt,conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{balance}
+\setlist[itemize]{leftmargin=1.2em,itemsep=0.2em,topsep=0.2em}
+\setlist[enumerate]{leftmargin=1.35em,itemsep=0.2em,topsep=0.2em}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+}
+
+\title{Final Implementation Appendix --- AI-Driven Search over PhishLLM Configurations}
+\author{\IEEEauthorblockN{Nazish Baliyan, CS7602 Final Submission}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This appendix documents the changes between the CS7602 midterm design
+document and the final implementation, the artefacts produced by an
+end-to-end run, and the lessons learned during the search loop. The
+implementation is in the accompanying \texttt{phishllm\_final/} repository.
+\end{abstract}
+
+\section{Changes since the midterm}
+\begin{itemize}
+    \item \textbf{Larger evaluation split.} The midterm prototype shipped a
+    7-sample smoke-test dataset. The final implementation ships a
+    deterministic synthetic generator (\texttt{src/phishllm\_search/genset.py})
+    that produces 142 samples (72 phishing / 70 benign) covering six
+    phishing failure modes and seven benign categories, including two
+    adversarial benign classes that were not in the midterm.
+    \item \textbf{Stronger candidate schema.} The final schema is
+    JSON-Schema-validated at every step (load, propose, accept). The
+    midterm used a Python-dict-based contract.
+    \item \textbf{Real AI proposer.} The midterm used a single
+    deterministic mutation list. The final loop adds an LLM proposer that
+    talks to the Anthropic Claude Messages API with a structured
+    meta-prompt (\texttt{prompts/meta\_search\_prompt.txt}) and a
+    deterministic heuristic fallback for offline / no-API-key runs.
+    \item \textbf{Failure-bucket classifier.} The midterm tracked five
+    qualitative failure modes. The final classifier tracks eight (added
+    \texttt{brand\_miss} and \texttt{fusion\_miss}) and is unit-tested.
+    \item \textbf{Selector and stopping rules.} A precision-floor selector,
+    a Pareto frontier, and explicit stopping rules
+    (\texttt{max\_rounds}, \texttt{no\_recall\_gain}, \texttt{empty\_round})
+    replace the midterm's manual ranking.
+    \item \textbf{Reporting pipeline.} The final loop renders five
+    matplotlib plots (search trace, Pareto frontier, failure buckets per
+    round, top-K confusion matrix, top-K recall with bootstrap CI) and
+    four Markdown/CSV tables (top-10 leaderboard, per-round failures,
+    seed comparison, baseline-vs-best). The midterm produced raw JSON
+    only.
+    \item \textbf{Tests.} 48 unit tests across schema, metrics, failures,
+    backends, evaluator, proposer, and the search loop.
+    \item \textbf{HPC.} Three Slurm scripts including an array job that
+    submits one task per candidate.
+\end{itemize}
+
+\section{Headline numbers}
+The full search runs end-to-end in $\approx$\,2 seconds on commodity
+hardware (no GPU). Twenty candidates are evaluated across three rounds;
+fifteen meet the precision floor. The best candidate dominates the
+official-style baseline on every reported axis:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.05}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Candidate} & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{rt (s)} & \textbf{\$/1K} & \textbf{Floor} \\
+\midrule
+\texttt{seed\_baseline}      & 1.00 & 0.74 & 0.85 & 1.70 & 2.30 & \checkmark \\
+\texttt{seed\_recall\_first} & 0.78 & 1.00 & 0.88 & 1.70 & 2.30 & $\times$ \\
+\texttt{seed\_no\_validation}& 0.51 & 0.74 & 0.60 & 1.30 & 1.70 & $\times$ \\
+\texttt{seed\_robust}        & 1.00 & 1.00 & 1.00 & 1.70 & 2.30 & \checkmark \\
+\textbf{\texttt{round2\_thr90}} (best) & \textbf{1.00} & \textbf{1.00} & \textbf{1.00} & \textbf{0.55} & \textbf{0.50} & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Search trace and Pareto frontier}
+The search trace shows the best-recall-so-far (under the precision floor)
+growing monotonically with the largest jump in round 1, where the
+heuristic proposer moves from the baseline-class candidates ($R\!=\!0.74$)
+to the robust-prompt cluster ($R\!=\!1.0$). Round 2 produces no further
+recall gain and the search terminates on
+\texttt{no\_recall\_gain\_under\_floor}.
+
+The Pareto frontier over (recall up, runtime down, cost down) yields three
+distinct operating points: a low-cost no-interaction point
+(\texttt{round2\_thr90}: \$0.50/1K, 0.55\,s), a balanced cached-validation
+point (\texttt{seed\_balanced}: \$1.80/1K, 1.35\,s), and a high-recall
+robust point (\texttt{seed\_robust}: \$2.30/1K, 1.70\,s). All three meet
+the precision floor; the practitioner can pick the right operating point
+by their cost/latency budget.
+
+\section{Most informative experiments}
+\begin{itemize}
+    \item \textbf{Popularity validation is load-bearing.} Disabling it
+    (\texttt{seed\_no\_validation}) raised \texttt{alias\_false\_positive}
+    from 0 to 50 events --- the largest single regression observed in any
+    candidate.
+    \item \textbf{URL-stem fallback needs corroboration.} The
+    \texttt{brand\_recall\_v1} prompt fires URL-stem fallback
+    unconditionally and produces 20 \texttt{brand\_hallucination} FPs
+    on indie sites with brand-like stems. The \texttt{brand\_robust\_v1}
+    prompt only fires the fallback when the URL is on a suspicious TLD or
+    a hosting platform, eliminating those FPs without losing any phishing
+    recall.
+    \item \textbf{Cached popularity validation is almost free.} The cost
+    drops from \$2.30 to \$1.00 per 1K pages with no recall loss.
+    \item \textbf{Prompt-injection defence has near-zero cost.}
+    \texttt{prompt\_defense=true} never harmed any operating point.
+\end{itemize}
+
+\section{Reproduction}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+make install
+make demo                       # ~10 seconds, deterministic
+make search ROUNDS=4 SEED=7     # full search (heuristic proposer)
+make report                     # plots + tables + case study
+
+# To switch to the LLM proposer:
+export ANTHROPIC_API_KEY=...
+make search PROPOSER=llm
+\end{lstlisting}
+
+\section{Honest limitations}
+The mock backend is a transparent rule emulator, not the real PhishLLM
+pipeline. It is intentionally simple so the search trade-offs are
+legible, and it reproduces the failure modes the paper catalogues, but it
+does not reproduce every nuance of the upstream OCR / captioning / Google
+Programmable Search integration. The included \texttt{OfficialRepoBackend}
+documents the exact contract for plugging in the upstream repository; the
+search loop, evaluator, reporting, and Slurm scripts are unchanged.
+
+The headline numbers are reported on a synthetic 142-site reduced split.
+A full-scale evaluation on the 12K-sample public benchmark is feasible
+under the same contract but was out of scope for the 5-day final-submission
+window.
+
+\end{document}

@@ -1,0 +1,12 @@
+SYSTEM: Decide whether the current webpage is a Credential-Requiring Page. Precision is
+more important than recall here.
+
+INSTRUCTIONS:
+- Require an explicit credential field (password, security code, seed phrase) or an
+  unambiguous sign-in form.
+- "Continue" / "Next" buttons alone are NOT enough; do not infer transition unless the
+  context unambiguously indicates a credential capture flow.
+- Generic account dashboards without a credential field are NOT CRP.
+
+OUTPUT FORMAT:
+{ "is_crp": <bool>, "transition_required": <bool>, "evidence": ["<short reason>"] }

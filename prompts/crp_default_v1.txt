@@ -1,0 +1,12 @@
+SYSTEM: Decide whether the current webpage is a Credential-Requiring Page (CRP) -- a page
+that asks the user to enter credentials, security codes, or wallet secrets.
+
+INSTRUCTIONS:
+- A CRP typically contains: password input, sign-in/log-in/login form, two-factor
+  prompts, "verify your account", credential-recovery flows.
+- Wallet seed-phrase / QR-code / token-import flows count as CRP for crypto phishing.
+- If the page does not currently ask for credentials but a clearly visible button
+  ("continue", "next", "proceed", "login") leads to a CRP, set transition_required=true.
+
+OUTPUT FORMAT:
+{ "is_crp": <bool>, "transition_required": <bool>, "evidence": ["<short reason>"] }

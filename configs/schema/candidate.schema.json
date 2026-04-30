@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishllm-search/candidate.schema.json",
+  "title": "PhishLLM candidate configuration",
+  "description": "Structured configuration for an inference-time PhishLLM-style detector. The evaluator is fixed; the search loop only varies fields in this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "backend",
+    "brand_prompt",
+    "crp_prompt",
+    "use_logo_ocr",
+    "use_logo_caption",
+    "prompt_defense",
+    "popularity_validation",
+    "hosting_rule",
+    "max_interactions",
+    "brand_confidence_min",
+    "report_policy",
+    "temperature",
+    "runtime_budget_sec"
+  ],
+  "properties": {
+    "name":                  { "type": "string", "minLength": 1, "maxLength": 80 },
+    "backend":               { "type": "string", "enum": ["mock", "official_repo", "replay"] },
+    "brand_prompt":          { "type": "string", "enum": ["brand_default_v1", "brand_recall_v1", "brand_precision_v1", "brand_robust_v1"] },
+    "crp_prompt":            { "type": "string", "enum": ["crp_default_v1", "crp_recall_v1", "crp_precision_v1", "crp_robust_v1"] },
+    "use_logo_ocr":          { "type": "boolean" },
+    "use_logo_caption":      { "type": "boolean" },
+    "prompt_defense":        { "type": "boolean" },
+    "popularity_validation": { "type": "string", "enum": ["google-indexed", "cached", "disabled"] },
+    "hosting_rule":          { "type": "string", "enum": ["strict", "relaxed"] },
+    "max_interactions":      { "type": "integer", "minimum": 0, "maximum": 2 },
+    "brand_confidence_min":  { "type": "number", "minimum": 0.5, "maximum": 0.95 },
+    "report_policy":         { "type": "string", "enum": ["mismatch_and_crp", "mismatch_or_crp", "score_only"] },
+    "temperature":           { "type": "number", "minimum": 0.0, "maximum": 0.5 },
+    "runtime_budget_sec":    { "type": "number", "minimum": 1.0, "maximum": 30.0 },
+
+    "official_repo_root":    { "type": "string" },
+    "official_repo_command": { "type": "string" },
+    "replay_dir":            { "type": "string" },
+    "hypothesis":            { "type": "string", "maxLength": 500 }
+  }
+}

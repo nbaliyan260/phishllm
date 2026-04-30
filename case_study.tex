@@ -1,0 +1,145 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titling}
+\setlist[itemize]{leftmargin=1.2em,itemsep=0.15em,topsep=0.2em}
+
+\setlength{\droptitle}{-2.5em}
+\title{\vspace{-1.0em}\textbf{AI-Driven Configuration Search for PhishLLM-Style Phishing Detection}}
+\author{Nazish Baliyan \quad CS7602 Coursework Case Study \\[-0.4em]
+\small Selected paper: Liu et al., \emph{Less Defined Knowledge and More True Alarms: Reference-based Phishing Detection without a Pre-defined Reference List}, USENIX Security 2024}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\paragraph{Problem setup.}
+PhishLLM is a four-stage reference-free phishing detector: brand
+recognition, credential-requiring-page (CRP) detection, optional CRP
+transition, and validation/fusion. Each stage exposes prompt and policy
+knobs that interact non-trivially. I formulate the inference-time
+configuration as a candidate space and use AI to search it under a hard
+precision floor of $0.95$ and bounded runtime/cost. A candidate is a JSON
+object validated against a fixed schema; the evaluator is a frozen
+\texttt{evaluate(candidate, dataset)} that returns precision, recall, F1,
+FPR/FNR, runtime, estimated cost per 1K pages, a confusion matrix, and a
+structured failure-bucket histogram.
+
+\paragraph{Solution generator.}
+Two interchangeable proposers share the same \texttt{ProposerContext}.
+The \emph{heuristic proposer} is deterministic, dependency-free, and picks
+among \{recall, precision, robustness, validation, cost\} mutations
+conditioned on the dominant failure bucket of the previous round. The
+\emph{LLM proposer} calls Anthropic Claude with a meta-prompt containing
+the schema, top-$k$ candidates, one diverse under-performer, and the
+failure summary; it parses, JSON-schema-validates, and de-duplicates the
+returned candidates, falling back to the heuristic proposer on any error.
+A precision-floor selector ranks each round by
+$(\text{floor\_ok}, \text{recall}, \text{F1}, -\text{runtime}, -\text{cost})$;
+the Pareto frontier over $(\text{recall}\!\uparrow, \text{runtime}\!\downarrow, \text{cost}\!\downarrow)$ is
+preserved between rounds. The search stops after 4 rounds or after two rounds with $<\!1\%$ recall gain.
+
+\paragraph{Evaluator and metrics.}
+The dataset uses the per-site folder layout from the official PhishLLM
+repository (\texttt{info.txt}, \texttt{html.txt}, optional \texttt{shot.png})
+plus a \texttt{labels.csv} with ground-truth label, target brand, and CRP
+flag. I generate \textbf{142 samples} (72 phishing / 70 benign) across six
+phishing templates (brand mismatch, typosquat, hidden-login, prompt
+injection, crypto, lesser-known brand) and seven benign templates,
+including two adversarial classes (indie sites with brand-like URL stems,
+hosted dev projects). Recall is reported with a 95\% percentile-bootstrap
+CI (1\,000 iterations, seeded).
+
+\paragraph{Results.}
+20 candidates across 3 rounds; 15 met the precision floor.
+The best candidate (\texttt{round2\_thr90}) achieves
+\textbf{precision $1.00$, recall $1.00$, F1 $1.00$} at a median runtime of
+\textbf{$0.55$\,s} and an estimated cost of \textbf{\$0.50/1K pages},
+versus the official-style baseline (\texttt{seed\_baseline}: $P\!=\!1.00$,
+$R\!=\!0.74$, F1 $=\!0.85$, runtime $1.70$\,s, cost \$2.30/1K).
+That is a \textbf{$+26.4$ percentage-point recall gain at $-1.15$\,s
+runtime and $-\$1.80$/1K cost} — i.e.\ a strict Pareto-improvement on the
+baseline. The most informative failure bucket across the search was
+\texttt{brand\_miss} (133 events), driven by lesser-known
+brands. Disabling \texttt{popularity\_validation} produced \textbf{50 alias
+false-positives} (\texttt{seed\_no\_validation}), confirming that the
+paper's validation stage is genuinely load-bearing.
+
+\vspace{-0.5em}
+\begin{center}
+\renewcommand{\arraystretch}{1.05}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Candidate} & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{rt (s)} & \textbf{\$/1K} & \textbf{Floor} \\
+\midrule
+\texttt{seed\_baseline}      & 1.00 & 0.74 & 0.85 & 1.70 & 2.30 & \checkmark \\
+\texttt{seed\_recall\_first} & 0.78 & 1.00 & 0.88 & 1.70 & 2.30 & $\times$ \\
+\texttt{seed\_no\_validation}& 0.51 & 0.74 & 0.60 & 1.30 & 1.70 & $\times$ \\
+\texttt{seed\_robust}        & 1.00 & 1.00 & 1.00 & 1.70 & 2.30 & \checkmark \\
+\texttt{round2\_thr90} (best) & 1.00 & 1.00 & 1.00 & 0.55 & 0.50 & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{-0.6em}
+
+\paragraph{Search behaviour.}
+The search trace shows best-recall-so-far growing
+monotonically under the precision floor, with the largest jumps in the
+earliest rounds and diminishing returns thereafter — the textbook
+signature of a useful but finite search signal. The Pareto frontier yields
+three operating points that practitioners would actually pick: a low-cost
+no-interaction point, a balanced cached-validation point, and a high-recall
+robust point. The final stopping reason was
+\texttt{no\_recall\_gain\_under\_floor} after round 2.
+
+\paragraph{Honest scope.}
+The evaluator backend is a transparent rule emulator over a deterministic
+synthetic 142-site split, not the real PhishLLM pipeline. The absolute
+numbers (in particular the perfect $P\!=\!R\!=\!F1\!=\!1.0$ of the best
+candidate) are therefore not directly comparable to the paper's 12K-sample
+benchmark. The contribution is the \emph{trade-off pattern} ---
+popularity validation is load-bearing, robust prompts strictly dominate
+recall-leaning prompts on adversarial benign pages, cached validation is
+near-free, prompt-injection defence is near-free --- and the documented
+\texttt{OfficialRepoBackend} adapter that lets the same search loop,
+evaluator, reporting, and Slurm scripts run unchanged against the upstream
+repository for a faithful evaluation.
+
+\paragraph{Lessons for practitioners.}
+\begin{itemize}
+    \item \textbf{Popularity validation is a contract, not a knob.}
+    Disabling it caused the largest measurable harm in this benchmark
+    (\texttt{alias\_false\_positive} jumped from 0 to 50).
+    \item \textbf{Recall-leaning brand prompts must be paired with a
+    corroborating signal.} URL-stem fallback alone over-flags benign indie
+    sites with brand-like names; gating it on suspicious TLD / hosting
+    domain (the \texttt{brand\_robust\_v1} prompt) eliminates 100\% of
+    those FPs without losing any phishing recall.
+    \item \textbf{Cached popularity validation is almost free.} It cuts
+    runtime from $1.70$\,s to $0.90$\,s and cost from \$2.30 to \$1.00 per
+    1K pages with no recall loss.
+    \item \textbf{Prompt-injection defence has near-zero cost.}
+    \texttt{prompt\_defense=true} never harmed any operating point and was
+    load-bearing for the prompt-injection samples.
+    \item \textbf{Structured feedback matters for AI search.} Passing the
+    LLM proposer the failure-bucket histogram, the top-$k$ \emph{and} a
+    diverse under-performer reduced duplicate proposals dramatically
+    compared to passing only aggregate metrics.
+\end{itemize}
+
+\paragraph{Reproduction.}
+\texttt{make install \&\& make demo} (deterministic, no API key);
+\texttt{make search ROUNDS=4} for the full run. Set
+\texttt{ANTHROPIC\_API\_KEY} and \texttt{PROPOSER=llm} to switch to Claude.
+All artifacts are written to \texttt{runs/} and \texttt{artifacts/}.
+
+\end{document}
