@@ -5,6 +5,7 @@ detector — the final coursework project for **CS7602: Using AI to Explore a
 Security Research Problem**, by **Nazish Baliyan**.
 
 **Full manual (paper, every file, architecture, metrics):** see [`PROJECT_REFERENCE.md`](PROJECT_REFERENCE.md).
+**One-stop grader audit sheet** (Pareto rule + API cost tracking + prompt excerpt + reproduction commands): see [`VERIFICATION.md`](VERIFICATION.md).
 
 > Selected paper: Liu et al., *Less Defined Knowledge and More True Alarms:
 > Reference-based Phishing Detection without a Pre-defined Reference List*,
