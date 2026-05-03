@@ -5,7 +5,7 @@ from .selector import precision_floor_selector, pareto_frontier
 from .stopping import StopReason, evaluate_stopping
 from .proposers.base import Proposer, ProposerContext
 from .proposers.heuristic import HeuristicProposer
-from .proposers.llm import LLMProposer, LLMProposerConfig
+from .proposers.llm_proposer import LLMCostTracker, LLMProposer
 
 __all__ = [
     "SearchConfig",
@@ -18,5 +18,5 @@ __all__ = [
     "ProposerContext",
     "HeuristicProposer",
     "LLMProposer",
-    "LLMProposerConfig",
+    "LLMCostTracker",
 ]

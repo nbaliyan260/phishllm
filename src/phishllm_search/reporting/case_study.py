@@ -29,14 +29,23 @@ Two interchangeable proposers share the same `ProposerContext`:
 1. **Heuristic proposer.** Deterministic, dependency-free, reproducible. Picks among
    `recall`, `precision`, `robustness`, `validation`, and `cost` mutations based on the
    dominant failure bucket of the previous round.
-2. **LLM proposer.** Calls Anthropic Claude with a meta-prompt containing the schema, top-k
-   candidates, one diverse under-performer, and the failure summary; parses, validates, and
-   de-duplicates the JSON array it returns. Falls back to the heuristic proposer if the API
-   is unavailable, so the pipeline is always runnable.
+2. **LLM proposer (unified).** Sends a structured JSON meta-prompt (objective, hard
+   constraints, full candidate schema, top-k candidates, diverse under-performer,
+   failure summary, instructions) to either Anthropic Claude (`claude-3-haiku-20240307`)
+   or Google Gemini (`gemini-1.5-flash`) at `temperature=0`; parses, schema-validates,
+   and de-duplicates the JSON array it returns. Per-call token usage and an estimated
+   USD cost are recorded in `runs/search/llm_cost_summary.json`. On any failure (missing
+   SDK, missing key, HTTP error, malformed JSON, schema-invalid candidate, all-duplicates)
+   the deterministic heuristic fallback kicks in transparently, so the pipeline is always
+   runnable offline.
 
-After every round a precision-floor selector ranks candidates by `(floor_ok, recall, F1, -runtime, -cost)`,
-the Pareto frontier over `(recall up, runtime down, cost down)` is computed, and a stopping
-test terminates the search after `max_rounds` or after two consecutive rounds with <1% recall gain.
+After every round a precision-floor selector ranks candidates by `(floor_ok, recall, F1, -runtime, -cost)`.
+**Pareto frontier rule (explicit):** candidate A dominates B iff `recall_A >= recall_B`,
+`runtime_A <= runtime_B`, and `cost_A <= cost_B` with at least one strict inequality; A is
+Pareto-optimal if no evaluated candidate dominates it. Candidates below the precision floor
+are discarded; from the survivors the search carries forward the best-recall candidate, up to
+two additional Pareto-frontier candidates, and the lowest-cost candidate. The search stops
+after `max_rounds` or after two consecutive rounds with <1% recall gain.
 
 ## Evaluator and metrics
 The dataset uses the per-site folder layout from the official PhishLLM repository
@@ -97,8 +106,9 @@ make search ROUNDS=4 # full search
 make report
 ```
 All artifacts land in `runs/` and `artifacts/`. With no API key set, the pipeline runs
-end-to-end on the deterministic heuristic proposer; setting `ANTHROPIC_API_KEY` and
-`PROPOSER=llm` switches to Claude.
+end-to-end on the deterministic heuristic proposer; setting `ANTHROPIC_API_KEY` (or
+`GEMINI_API_KEY`) and `PROPOSER=auto` (or `anthropic` / `gemini`) switches to the LLM
+proposer. Per-run LLM token + dollar cost is logged to `runs/search/llm_cost_summary.json`.
 """
 
 

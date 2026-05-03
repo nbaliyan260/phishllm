@@ -32,7 +32,8 @@
                                v
                   +------------+------------+
                   |     Proposer            |
-                  |   heuristic | LLM       |
+                  |  heuristic | LLM unified |
+                  |  (anthropic|gemini|auto) |
                   |  (uses ProposerContext) |
                   +------------+------------+
                                |
@@ -76,6 +77,6 @@
 | Mock backend          | pure functions of `(sample, candidate)` |
 | Bootstrap recall CI   | seeded `random.Random(seed + round_idx)` |
 | Heuristic proposer    | seeded `random.Random(seed)` |
-| LLM proposer (Claude) | `temperature=0.4` for diversity, but de-duplication on `candidate_hash` keeps the search non-degenerate; on any error the fallback heuristic proposer kicks in deterministically |
+| LLM proposer (unified) | Anthropic Claude (`claude-3-haiku-20240307`) or Google Gemini (`gemini-1.5-flash`) at `temperature=0`; schema validation + `candidate_hash` dedup keep the search non-degenerate. On missing SDK, missing API key, HTTP error, malformed JSON, schema-invalid candidate, or all-duplicates the deterministic heuristic fallback kicks in transparently, so the pipeline is always runnable offline. |
 
 Reproducing the headline numbers therefore requires only `--seed 7`.

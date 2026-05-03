@@ -6,9 +6,11 @@ numpy>=1.23
 pandas>=1.5
 matplotlib>=3.5
 
-# Optional: enable LLM-driven proposer. If unavailable the pipeline
-# transparently falls back to the deterministic heuristic proposer.
+# Optional: enable LLM-driven proposer. Either SDK is sufficient; if
+# neither is installed (or no API key is set) the pipeline transparently
+# falls back to the deterministic heuristic proposer.
 anthropic>=0.34 ; python_version >= "3.9"
+google-generativeai>=0.5,<1.0 ; python_version >= "3.9"
 
 # Optional: nicer YAML configs (we also accept JSON everywhere).
 PyYAML>=6.0

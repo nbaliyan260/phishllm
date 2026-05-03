@@ -76,18 +76,54 @@ python3 -m pip install -r requirements.txt
 python3 -m pip install -r requirements-dev.txt
 ```
 
-Optional: enable the LLM proposer (Anthropic Claude). The pipeline stays
-fully runnable without this — if the SDK or `ANTHROPIC_API_KEY` is missing,
-the proposer transparently falls back to the heuristic mutator.
+### Optional LLM Proposer Support
+
+The pipeline ships with a **deterministic heuristic proposer** that requires
+no API keys and runs fully offline — this is the configuration used by
+`make demo`, all unit tests, and the headline results in this README. You
+do not need to enable any LLM provider to reproduce the reported numbers.
+
+On top of that, two optional LLM providers can be plugged in through a
+single unified proposer (`LLMProposer`). The proposer auto-detects which
+one to use from the environment; if neither is available it transparently
+falls back to the heuristic proposer so the pipeline **never crashes when
+run offline**.
+
+| Provider | Model | Env var | Install |
+|----------|-------|---------|---------|
+| Anthropic Claude | `claude-3-haiku-20240307` | `ANTHROPIC_API_KEY` | `pip install "anthropic>=0.34"` |
+| Google Gemini    | `gemini-1.5-flash`        | `GEMINI_API_KEY`    | `pip install "google-generativeai>=0.5,<1.0"` |
+
+Enable whichever you prefer:
 
 ```bash
-python3 -m pip install "anthropic>=0.34"
-export ANTHROPIC_API_KEY="sk-ant-..."   # never commit this
+# Anthropic Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
+make search PROPOSER=anthropic
+
+# Google Gemini
+export GEMINI_API_KEY="..."
+make search PROPOSER=gemini
+
+# Let the pipeline pick automatically (Anthropic > Gemini > heuristic)
+make search PROPOSER=auto
 ```
 
-> **Security note.** Do not paste API keys into prompts, READMEs, or chat
-> windows. If you have already done so, revoke the key in the Anthropic
-> console and generate a fresh one.
+Determinism is preserved: evaluation is always seeded, schema-validated,
+and identical to the heuristic run for any candidate the LLM actually
+produces. Any LLM failure (missing SDK, network error, malformed JSON,
+schema-invalid proposal, duplicate candidate, etc.) automatically falls
+back to the heuristic mutator.
+
+When an LLM call does run, cumulative token usage and an **estimated
+USD cost** are written to `runs/search/llm_cost_summary.json` at the end
+of the search. No cost file is written for pure-heuristic runs.
+
+> **Security note.** Do not paste API keys into prompts, READMEs, chat
+> windows, or commits. If you have already done so, revoke the key in
+> the provider console and generate a fresh one. The code reads keys
+> only from the environment variables above; keys are never persisted
+> by this repository.
 
 ---
 

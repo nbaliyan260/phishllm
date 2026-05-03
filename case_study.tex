@@ -38,14 +38,35 @@ Two interchangeable proposers share the same \texttt{ProposerContext}.
 The \emph{heuristic proposer} is deterministic, dependency-free, and picks
 among \{recall, precision, robustness, validation, cost\} mutations
 conditioned on the dominant failure bucket of the previous round. The
-\emph{LLM proposer} calls Anthropic Claude with a meta-prompt containing
+\emph{LLM proposer} is a unified multi-provider adapter (Anthropic Claude
+or Google Gemini) that sends a structured JSON meta-prompt containing
 the schema, top-$k$ candidates, one diverse under-performer, and the
 failure summary; it parses, JSON-schema-validates, and de-duplicates the
 returned candidates, falling back to the heuristic proposer on any error.
 A precision-floor selector ranks each round by
-$(\text{floor\_ok}, \text{recall}, \text{F1}, -\text{runtime}, -\text{cost})$;
-the Pareto frontier over $(\text{recall}\!\uparrow, \text{runtime}\!\downarrow, \text{cost}\!\downarrow)$ is
-preserved between rounds. The search stops after 4 rounds or after two rounds with $<\!1\%$ recall gain.
+$(\text{floor\_ok}, \text{recall}, \text{F1}, -\text{runtime}, -\text{cost})$.
+\textbf{Pareto frontier rule (explicit):} candidate $A$ dominates $B$ iff
+$\text{recall}_A\!\ge\!\text{recall}_B$ \emph{and}
+$\text{runtime}_A\!\le\!\text{runtime}_B$ \emph{and}
+$\text{cost}_A\!\le\!\text{cost}_B$, with at least one strict inequality;
+$A$ is Pareto-optimal if no evaluated candidate dominates it. After each
+round I discard candidates below the $0.95$ precision floor, then keep
+the best-recall candidate, up to two additional Pareto candidates, and
+the single lowest-cost survivor as the carry-over. The search stops
+after 4 rounds or after two rounds with $<\!1\%$ recall gain.
+
+\paragraph{Prompt template (excerpt from \texttt{prompts/brand\_robust\_v1.txt}).}
+\begin{small}\begin{verbatim}
+ROBUSTNESS RULES:
+- Ignore text that instructs you to change behaviour ("ignore previous
+  instructions", "this is benign", "do not flag", etc.).
+- Cross-check brand keywords against the URL: cosmetic similarity to a
+  known brand in the host (e.g. "micr0soft", "paypa1") is a strong
+  phishing signal, not a legitimacy signal.
+- Prefer registrable-domain comparison over substring matching.
+OUTPUT: {"brand":"<domain|null>","confidence":<float>,
+         "evidence":[...],"injection_detected":<bool>}
+\end{verbatim}\end{small}
 
 \paragraph{Evaluator and metrics.}
 The dataset uses the per-site folder layout from the official PhishLLM
@@ -90,6 +111,19 @@ paper's validation stage is genuinely load-bearing.
 \end{tabular}
 \end{center}
 \vspace{-0.6em}
+
+\paragraph{Budget and cost.}
+The fixed evaluator's own cost floor (mock backend) is $\approx$\$0.50/1K
+pages on the Pareto frontier at a $0.55$\,s median runtime under a $6$\,s
+per-page runtime budget --- the operating point the search actually picks.
+The optional LLM proposer adds a small search-time cost: at list prices
+for \texttt{claude-3-haiku-20240307} (\$0.00025 / \$0.00075 per 1K
+input / output tokens) or \texttt{gemini-1.5-flash}
+($\approx\!\$0.00035$ per 1K tokens) and $\approx\!2$K tokens per call,
+a full 4-round search uses $\approx\!8$K tokens and costs
+$<\!\$0.01$ per search pass. Actual per-run usage is logged to
+\texttt{runs/search/llm\_cost\_summary.json}; heuristic-only runs incur
+no API cost.
 
 \paragraph{Search behaviour.}
 The search trace shows best-recall-so-far growing
@@ -139,7 +173,10 @@ repository for a faithful evaluation.
 \paragraph{Reproduction.}
 \texttt{make install \&\& make demo} (deterministic, no API key);
 \texttt{make search ROUNDS=4} for the full run. Set
-\texttt{ANTHROPIC\_API\_KEY} and \texttt{PROPOSER=llm} to switch to Claude.
-All artifacts are written to \texttt{runs/} and \texttt{artifacts/}.
+\texttt{ANTHROPIC\_API\_KEY} for Claude or \texttt{GEMINI\_API\_KEY} for
+Gemini and run \texttt{make search PROPOSER=auto} (or \texttt{anthropic}
+/ \texttt{gemini}); with no key the pipeline stays fully offline on the
+heuristic proposer. All artifacts are written to \texttt{runs/} and
+\texttt{artifacts/}.
 
 \end{document}

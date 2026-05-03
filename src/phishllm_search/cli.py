@@ -45,7 +45,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("--candidate_dir", required=True)
     p_search.add_argument("--out_dir", required=True)
     p_search.add_argument("--rounds", type=int, default=4)
-    p_search.add_argument("--proposer", choices=["heuristic", "llm"], default="heuristic")
+    p_search.add_argument(
+        "--proposer",
+        choices=["auto", "anthropic", "gemini", "heuristic", "llm"],
+        default="auto",
+        help=(
+            "Which proposer to use. 'auto' picks anthropic if ANTHROPIC_API_KEY "
+            "is set, else gemini if GEMINI_API_KEY is set, else the deterministic "
+            "heuristic proposer. 'llm' is a deprecated alias for 'auto'."
+        ),
+    )
     p_search.add_argument("--precision_floor", type=float, default=0.95)
     p_search.add_argument("--runtime_budget_sec", type=float, default=6.0)
     p_search.add_argument("--cost_budget", type=float, default=5.0)

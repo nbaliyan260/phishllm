@@ -4,7 +4,7 @@ PY_RUN := PYTHONPATH=src $(PY)
 DATA_DIR ?= data
 RUNS_DIR ?= runs
 ART_DIR ?= artifacts
-PROPOSER ?= heuristic   # heuristic | llm
+PROPOSER ?= heuristic   # heuristic | auto | anthropic | gemini | llm (deprecated alias for auto)
 ROUNDS ?= 4
 SEED ?= 7
 

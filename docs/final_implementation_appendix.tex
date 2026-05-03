@@ -42,18 +42,33 @@ implementation is in the accompanying \texttt{phishllm\_final/} repository.
     \item \textbf{Stronger candidate schema.} The final schema is
     JSON-Schema-validated at every step (load, propose, accept). The
     midterm used a Python-dict-based contract.
-    \item \textbf{Real AI proposer.} The midterm used a single
-    deterministic mutation list. The final loop adds an LLM proposer that
-    talks to the Anthropic Claude Messages API with a structured
-    meta-prompt (\texttt{prompts/meta\_search\_prompt.txt}) and a
-    deterministic heuristic fallback for offline / no-API-key runs.
+    \item \textbf{Real AI proposer (unified, multi-provider).} The
+    midterm used a single deterministic mutation list. The final loop
+    adds a unified LLM proposer that talks to either the Anthropic
+    Claude Messages API (\texttt{claude-3-haiku-20240307}) or the Google
+    Gemini API (\texttt{gemini-1.5-flash}) at \texttt{temperature}$=\!0$
+    with a structured JSON meta-prompt (objective, hard constraints,
+    candidate schema, top-$k$ candidates, diverse under-performer,
+    failure summary, instructions) built directly in Python. A
+    \texttt{LLMCostTracker} records token usage and an estimated USD
+    cost per call, written to \texttt{runs/search/llm\_cost\_summary.json}
+    at the end of the search. On missing SDK / API key / HTTP error /
+    malformed JSON / schema-invalid candidate / all-duplicates the
+    deterministic heuristic fallback kicks in transparently, so the
+    pipeline is always runnable offline (\texttt{make demo} needs no
+    keys).
     \item \textbf{Failure-bucket classifier.} The midterm tracked five
     qualitative failure modes. The final classifier tracks eight (added
     \texttt{brand\_miss} and \texttt{fusion\_miss}) and is unit-tested.
-    \item \textbf{Selector and stopping rules.} A precision-floor selector,
-    a Pareto frontier, and explicit stopping rules
-    (\texttt{max\_rounds}, \texttt{no\_recall\_gain}, \texttt{empty\_round})
-    replace the midterm's manual ranking.
+    \item \textbf{Selector and stopping rules (explicit Pareto).} A
+    precision-floor selector, an \emph{explicit} Pareto-dominance rule
+    ($A$ dominates $B$ iff
+    $\text{recall}_A\!\ge\!\text{recall}_B \land \text{runtime}_A\!\le\!\text{runtime}_B \land \text{cost}_A\!\le\!\text{cost}_B$ with
+    at least one strict inequality), an explicit carry-over rule
+    (discard below floor, keep best-recall + up to 2 Pareto + 1 lowest-cost,
+    see \texttt{selector.select\_carry\_candidates}), and explicit stopping
+    rules (\texttt{max\_rounds}, \texttt{no\_recall\_gain},
+    \texttt{empty\_round}) replace the midterm's manual ranking.
     \item \textbf{Reporting pipeline.} The final loop renders five
     matplotlib plots (search trace, Pareto frontier, failure buckets per
     round, top-K confusion matrix, top-K recall with bootstrap CI) and
@@ -126,13 +141,13 @@ by their cost/latency budget.
 \section{Reproduction}
 \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 make install
-make demo                       # ~10 seconds, deterministic
+make demo                       # ~10 seconds, deterministic, no API key
 make search ROUNDS=4 SEED=7     # full search (heuristic proposer)
 make report                     # plots + tables + case study
 
-# To switch to the LLM proposer:
-export ANTHROPIC_API_KEY=...
-make search PROPOSER=llm
+# To switch to the unified LLM proposer (either provider works):
+export ANTHROPIC_API_KEY=...    # or: export GEMINI_API_KEY=...
+make search PROPOSER=auto       # or: anthropic | gemini
 \end{lstlisting}
 
 \section{Honest limitations}

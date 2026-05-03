@@ -39,4 +39,5 @@ maps the dominant failure bucket to one of five mutation classes:
 | cost > budget | `cost`: cached validation, drop caption modality |
 
 This is exactly the failure-feedback structure the LLM proposer is also
-asked to reason over in its meta-prompt (`prompts/meta_search_prompt.txt`).
+asked to reason over in its structured JSON meta-prompt (built in
+`src/phishllm_search/search/proposers/llm_proposer.py::_build_meta_prompt`).

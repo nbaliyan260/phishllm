@@ -27,7 +27,7 @@ from ..utils.hashing import candidate_hash
 from ..utils.logging import JsonlWriter, get_logger
 from .proposers.base import Proposer, ProposerContext
 from .proposers.heuristic import HeuristicProposer
-from .proposers.llm import LLMProposer, LLMProposerConfig
+from .proposers.llm_proposer import LLMProposer
 from .selector import diverse_candidate, pareto_frontier, precision_floor_selector
 from .stopping import StopReason, StoppingState, evaluate_stopping
 
@@ -80,10 +80,21 @@ def _load_seed_candidates(candidate_dir: Path) -> List[Dict[str, Any]]:
 
 
 def _make_proposer(name: str, batch_size: int, seed: int) -> Proposer:
+    """Construct the proposer named by ``name``.
+
+    Accepted names: ``heuristic``, ``auto``, ``anthropic``, ``gemini``.
+    ``llm`` is retained as a backward-compatible alias for ``auto``.
+
+    When no provider is available (no key, no SDK, etc.) the unified LLM
+    proposer silently degrades to the deterministic heuristic proposer, so
+    the pipeline always runs offline.
+    """
     if name == "heuristic":
         return HeuristicProposer(batch_size=batch_size, seed=seed)
     if name == "llm":
-        return LLMProposer(config=LLMProposerConfig(batch_size=batch_size, fallback_seed=seed))
+        name = "auto"
+    if name in {"auto", "anthropic", "gemini"}:
+        return LLMProposer(mode=name, batch_size=batch_size, fallback_seed=seed)
     raise ValueError(f"Unknown proposer: {name!r}")
 
 
@@ -280,6 +291,17 @@ def run_search(cfg: SearchConfig) -> Dict[str, Any]:
             for r in final_top[:5]
         ]
         (cfg.out_dir / "top5.json").write_text(json.dumps(top5, indent=2), encoding="utf-8")
+
+    cost_tracker = getattr(proposer, "cost_tracker", None)
+    if cost_tracker is not None and getattr(cost_tracker, "total_calls", 0) > 0:
+        cost_snapshot = {
+            "proposer": getattr(proposer, "provider", cfg.proposer),
+            "requested_mode": getattr(proposer, "requested_mode", cfg.proposer),
+            **cost_tracker.snapshot(),
+        }
+        (cfg.out_dir / "llm_cost_summary.json").write_text(
+            json.dumps(cost_snapshot, indent=2), encoding="utf-8",
+        )
 
     return {
         "rounds_run": round_idx + 1,
