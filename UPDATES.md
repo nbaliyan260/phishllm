@@ -351,7 +351,7 @@ find . -name __pycache__ -o -name .pytest_cache -o -name .DS_Store
   export ANTHROPIC_API_KEY=...
   PYTHONPATH=src python3 -m phishllm_search.cli search \
       --dataset data --candidate_dir configs/candidates \
-      --out_dir runs/search_llm --rounds 1 --proposer llm --seed 7
+      --out_dir runs/search_llm --rounds 1 --proposer anthropic --seed 7
   ```
   This will not overwrite the heuristic run (different `out_dir`).
 - **Modify any source code, schema, prompt file, test, seed JSON,

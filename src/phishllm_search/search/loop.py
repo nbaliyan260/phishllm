@@ -83,7 +83,10 @@ def _make_proposer(name: str, batch_size: int, seed: int) -> Proposer:
     """Construct the proposer named by ``name``.
 
     Accepted names: ``heuristic``, ``auto``, ``anthropic``, ``gemini``.
-    ``llm`` is retained as a backward-compatible alias for ``auto``.
+    ``llm`` is retained as a **deprecated backward-compatible alias for
+    ``anthropic``** (the only LLM provider supported before the unified
+    proposer was added), so old scripts that passed ``PROPOSER=llm``
+    continue to work unchanged and still call Claude.
 
     When no provider is available (no key, no SDK, etc.) the unified LLM
     proposer silently degrades to the deterministic heuristic proposer, so
@@ -92,7 +95,7 @@ def _make_proposer(name: str, batch_size: int, seed: int) -> Proposer:
     if name == "heuristic":
         return HeuristicProposer(batch_size=batch_size, seed=seed)
     if name == "llm":
-        name = "auto"
+        name = "anthropic"
     if name in {"auto", "anthropic", "gemini"}:
         return LLMProposer(mode=name, batch_size=batch_size, fallback_seed=seed)
     raise ValueError(f"Unknown proposer: {name!r}")

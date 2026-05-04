@@ -156,12 +156,24 @@ make search ROUNDS=4 SEED=7     # 4 search rounds, deterministic
 make report                     # artifacts/plots, artifacts/tables, case_study.md
 ```
 
-To switch from the deterministic heuristic proposer to Claude:
+To switch from the deterministic heuristic proposer to an LLM provider:
 
 ```bash
+# Anthropic Claude
 export ANTHROPIC_API_KEY="..."
-make search PROPOSER=llm
+make search PROPOSER=anthropic
+
+# Google Gemini
+export GEMINI_API_KEY="..."
+make search PROPOSER=gemini
+
+# Or let the pipeline pick automatically (anthropic > gemini > heuristic)
+make search PROPOSER=auto
 ```
+
+`PROPOSER=llm` is kept as a **deprecated backward-compatible alias for
+`anthropic`**, so older scripts continue to work; prefer the explicit
+name in new work.
 
 Reproducibility is enforced at every step: the dataset is seeded from
 `SEED`, the evaluator is deterministic for the mock backend, the bootstrap
@@ -205,7 +217,9 @@ python3 -m phishllm_search.cli genset --out_dir DATA [--seed N]
 python3 -m phishllm_search.cli eval   --candidate CFG.json --dataset DATA --out_dir DIR
 python3 -m phishllm_search.cli search --dataset DATA --candidate_dir DIR \
                                       --out_dir DIR --rounds N \
-                                      --proposer {heuristic,llm} --seed N
+                                      --proposer {auto,anthropic,gemini,heuristic} \
+                                      --seed N
+# (the CLI also accepts --proposer llm as a deprecated alias for 'anthropic')
 python3 -m phishllm_search.cli report --search_dir DIR --baseline_dir DIR \
                                       --dataset DATA --out_dir DIR
 ```

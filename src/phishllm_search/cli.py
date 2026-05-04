@@ -50,9 +50,11 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["auto", "anthropic", "gemini", "heuristic", "llm"],
         default="auto",
         help=(
-            "Which proposer to use. 'auto' picks anthropic if ANTHROPIC_API_KEY "
-            "is set, else gemini if GEMINI_API_KEY is set, else the deterministic "
-            "heuristic proposer. 'llm' is a deprecated alias for 'auto'."
+            "Which proposer to use. Canonical choices are "
+            "{auto, anthropic, gemini, heuristic}. 'auto' picks anthropic "
+            "if ANTHROPIC_API_KEY is set, else gemini if GEMINI_API_KEY is "
+            "set, else the deterministic heuristic proposer. 'llm' is a "
+            "deprecated backward-compatible alias for 'anthropic'."
         ),
     )
     p_search.add_argument("--precision_floor", type=float, default=0.95)
